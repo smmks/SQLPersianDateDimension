@@ -1,6 +1,6 @@
-﻿-- Persian(Shamsi) date Function 
--- An improved version of "http://mamehdi.parsiblog.com/Posts/1" that work from 1370 to 1473 
-
+﻿
+	--declare @intdate datetime = '2026-02-20 18:48:00.000'
+	--declare @format as nvarchar(50)
 CREATE FUNCTION [dbo].[ShDate] (@intDate DATETIME , @format as nvarchar(50))
  
 RETURNS NVARCHAR(50)
@@ -9,8 +9,8 @@ BEGIN
 
 	--declare @intdate datetime = '2016-03-14 18:48:00.000'
 	DECLARE @Year Smallint=year(@intdate),@Month Tinyint=10,@Day Smallint=11,@DayCNT Tinyint,@YearDD Smallint=0,
-        @SHMM NVARCHAR(8),@SHDD NVARCHAR(8)
-	DECLARE @SHDATE NVARCHAR(max)
+        @SHMM NVARCHAR(8),@SHDD NVARCHAR(8),@Quarter Smallint,@QuarterName NVARCHAR(20)
+	DECLARE @ShDate NVARCHAR(max)
 	
 	/* Format Rules: (پنجشنبه 7 اردیبهشت 1394)
 	DWN -> پنجشنبه (روز هفته به حروف)
@@ -23,6 +23,9 @@ BEGIN
 	YYYY -> 1394 (سال چهار کاراکتری)
 	YY -> 94 (سال دو کاراکتری)
 	YYYY -> 1394 (سال چهار کاراکتری)
+	q -> 1 (شماره فصل)
+	QQ -> 01 (شماره فصل دو رقمی)
+	QQN -> (فصل به حروف)
 	DoY -> 38 (چندمین روز سال)
 	Default Format -> 'DWN d MMN YYYY'
 	*/
@@ -34,19 +37,22 @@ BEGIN
 
 	IF @Year < 1000 SET @Year += 2000
 
-	IF (@Format IS NULL) OR NOT LEN(@Format)>0 SET @Format = 'DWN d MMN YYYY'
+	--IF (@Format IS NULL) OR NOT LEN(@Format)>0 SET @Format = 'DWN d MMN YYYY'
+	IF (@Format IS NULL) OR NOT LEN(@Format)>0 SET @Format = 'YYYY-MM-DD'
 
 	SET @Year -= 622
 
 	/*===================================================================*/
 	--IF @Year % 4 = ("FYYYY + 1" % 4) and (@Year BETWEEN "FYYYY +1" AND "NFYYYY +1") SET @Day = 12 
-	  IF @Year % 4 = 3 and (@Year BETWEEN 1371 AND 1404) SET @Day = 12  
-	  IF @Year % 4 = 0 and (@Year BETWEEN 1404 AND 1437) SET @Day = 12  
+	  IF @Year % 4 = 3 and (@Year > 1371) SET @Day = 12  --BETWEEN 1372 AND 1407
+	  IF @Year % 4 = 0 and (@Year > 1407) SET @Day = 12  --BETWEEN 1408 AND 1437
 	  IF @Year % 4 = 1 and @Year > 1437 SET @Day = 12  --(@Year BETWEEN 1437 AND 1470)
 	
 	/*===================================================================*/
-
 	SET @Day += DATEPART(DY,@intdate) - 1
+
+
+
 	WHILE 1 = 1
 	BEGIN
 
@@ -57,11 +63,11 @@ BEGIN
 		      --WHEN @Year % 4 > ("FYYYY +1" % 4) and @Month=12 and @Year > "FYYYY" THEN 29    
 			  --WHEN @Year % 4 <> ("SYYYY -1" % 4) and @Month=12 and @Year > "SYYYY" THEN 29    
 		
-		        WHEN @Year % 4 < 3 and @Month=12 and (@Year BETWEEN 1370 AND 1404) THEN 29
+		        WHEN @Year % 4 < 3 and @Month=12 and (@Year BETWEEN 1370 AND 1403) THEN 29
 		        WHEN @Year % 4 <> 2 and @Month=12 and @Year < 1375 THEN 29
 		
-				WHEN @Year % 4 > 0 and @Month=12 and (@Year BETWEEN 1403 AND 1437) THEN 29
-				WHEN @Year % 4 <> 3 and @Month=12 and (@Year BETWEEN 1403 AND 1408) THEN 29
+				WHEN @Year % 4 > 0 and @Month=12 and (@Year BETWEEN 1404 AND 1437) THEN 29
+				WHEN @Year % 4 <> 3 and @Month=12 and (@Year BETWEEN 1404 AND 1407) THEN 29
 		
 				WHEN @Year % 4 > 1 and @Month=12 and (@Year BETWEEN 1436 AND 1470) THEN 29  
 				WHEN @Year % 4 <> 0 and @Month=12 and (@Year BETWEEN 1436 AND 1441) THEN 29 
@@ -80,6 +86,7 @@ BEGIN
 				SET @Year += 1
 				SET @YearDD = 0
 			END
+
 	    IF @Month < 7 AND @Day < 32 BREAK
 	    IF @Month BETWEEN 7 AND 11 AND @Day < 31 BREAK
 	
@@ -98,7 +105,7 @@ BEGIN
 		    IF @Month = 12 AND @Year % 4 = 3 AND @Year > 1371 AND @Day < 31 BREAK
 		END
 	
-		IF @Year BETWEEN 1403 AND 1437
+		IF @Year BETWEEN 1405 AND 1437
 		BEGIN
 		    IF @Month = 12 AND @Year % 4 > 0 AND @Year > 1403 AND @Day < 30 BREAK
 		    IF @Month = 12 AND @Year % 4 <> 3 AND @Year < 1408 AND @Day < 30 BREAK
@@ -114,9 +121,10 @@ BEGIN
 		    IF @Month = 12 AND @Year % 4 = 1 AND @Year > 1437 AND @Day < 31 BREAK
 		END
 
+	
+	
 	END
 
-	--SET @SHDATE =  str(@Year) +'/'+ str(@Month) +'/'+ str(@Day)
 	SET @YearDD += @Day
 	
 	SET @SHMM =
@@ -157,32 +165,38 @@ BEGIN
 	        WHEN @SHDD=N'جمعه' THEN 7
 	    END
 	
+	SET @Quarter =
+		CASE
+			WHEN @Month BETWEEN 1 AND 3 THEN 1
+			WHEN @Month BETWEEN 4 AND 6 THEN 2
+			WHEN @Month BETWEEN 7 AND 9 THEN 3
+			WHEN @Month BETWEEN 10 AND 12 THEN 4
+		END
+
+	SET @QuarterName =
+		CASE
+			WHEN @Quarter = 1 THEN N'بهار'
+			WHEN @Quarter = 2 THEN N'تابستان'
+			WHEN @Quarter = 3 THEN N'پاییز'
+			WHEN @Quarter = 4 THEN N'زمستان'
+		END
 	IF @Month=10 AND @Day>10 SET @YearDD += 276
 	IF @Month>10 SET @YearDD += 276
 	
-	SET @SHDATE =
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(
-	 REPLACE(@Format,'MMN',@SHMM),'DoY',LTRIM(STR(@YearDD,3))),'DWN',@SHDD),'DW',
-	         @DayCNT),'DD',REPLACE(STR(@Day,2), ' ', '0')),'MM',REPLACE(STR(@Month, 2), ' ', '0')),'YYYY',STR(@Year,4))
-			 ,'YY',SUBSTRING(STR(@Year,4),3,2)),'YYYY',LTRIM(STR(@Year,4))),'m',
-	         LTRIM(STR(@Month,2))),'d',LTRIM(STR(@Day,2)))
-	/* Format Samples:
-	Format='DWN d MMN YYYY' -> پنجشنبه 17 اردیبهشت 1394
-	Format='d MMN YYYY' -> ـ 17 اردیبهشت 1394
-	Format='d/m/YYYY' -> 1394/2/17
-	Format='DD/MM/YY' -> 94/02/17
-	Format='d روز گذشته از MMN در سال YY' -> ـ 17 روز گذشته از اردیبهشت در سال 94
-	*/
-	
-	RETURN @SHDATE
-END
 
+	SET @ShDate = REPLACE(@format,'YYYY',STR(@Year,4))
+	SET @ShDate = REPLACE(@ShDate,'YY',SUBSTRING(STR(@Year,4),3,2))
+	SET @ShDate = REPLACE(@ShDate,'DoY',LTRIM(STR(@YearDD,3)))
+	SET @ShDate = REPLACE(@ShDate,'MMN',@SHMM)
+	SET @ShDate = REPLACE(@ShDate,'MM',REPLACE(STR(@Month, 2), ' ', '0'))
+	SET @ShDate = REPLACE(@ShDate,'m',LTRIM(STR(@Month,2)))
+	SET @ShDate = REPLACE(@ShDate,'DWN',@SHDD)
+	SET @ShDate = REPLACE(@ShDate,'DW',@DayCNT)
+	SET @ShDate = REPLACE(@ShDate,'DD',REPLACE(STR(@Day,2), ' ', '0'))
+	SET @ShDate = REPLACE(@ShDate,'d',LTRIM(STR(@Day,2)))
+	SET @ShDate = REPLACE(@ShDate,'QQN',@QuarterName)
+	SET @ShDate = REPLACE(@ShDate,'QQ',REPLACE(STR(@Quarter, 2), ' ', '0'))
+	SET @ShDate = REPLACE(@ShDate,'q',@Quarter)
+
+	RETURN @ShDate
+END
