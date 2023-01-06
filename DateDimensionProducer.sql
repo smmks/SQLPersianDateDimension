@@ -1,15 +1,18 @@
-SET NOCOUNT ON
+SET NOCOUNT ON;
 
-TRUNCATE TABLE DIM_DateTest
+GO
 
-DECLARE @CurrentDate DATETIME = '2011-03-21 00:00:00.000'
-DECLARE @EndDate DATETIME = '2032-03-20 23:59:00.000'
---DECLARE @EndDate DATETIME = '2054-03-20 23:59:00.000'
---DECLARE @EndDate DATETIME = '2011-03-21 06:00:00.000'
+TRUNCATE [dbo].[Dim_Date];
+
+GO
+
+DECLARE @CurrentDate DATETIME = '2011-03-21 00:00:00.000' -- Define Start of your desired calendar
+DECLARE @EndDate DATETIME = '2032-03-20 23:59:00.000' -- Define end of your calendar
+
 
 WHILE @CurrentDate < @EndDate
 BEGIN
-   INSERT INTO [dbo].[Dim_DateTest] (
+   INSERT INTO [dbo].[Dim_Date] (
       [DateKey],
 	  [time_Stamp],
       [Date],
@@ -37,19 +40,19 @@ BEGIN
       [IsWeekend],
       [IsHoliday]
       )
-   SELECT DateKey = NEWID(),--YEAR(@CurrentDate) * 100000000 + MONTH(@CurrentDate) * 1000000 + DAY(@CurrentDate)  *10000  + (DatePart(HOUR,@CurrentDate)) *100 + (DatePart(MINUTE,@CurrentDate)),
+   SELECT DateKey = NEWID(),
       [time_Stamp] = @CurrentDate,
 	  DATE = CONVERT(DATE, @CurrentDate),
-	  [ShDate] = dbo.ShDateTest(@CurrentDate,'YYYY-MM-DD'),
+	  [ShDate] = dbo.ShDate(@CurrentDate,'YYYY-MM-DD'),
       Day = DAY(@CurrentDate),
       WEEKDAY = DATEPART(dw, @CurrentDate),
-	  [ShWeekday] = Cast(dbo.ShDateTest(@CurrentDate,'dw') as tinyint),
+	  [ShWeekday] = Cast(dbo.ShDate(@CurrentDate,'dw') as tinyint),
 	  [WeekDayName] = DATENAME(dw, @CurrentDate),
-	  [ShWeekDayName] = dbo.ShDateTest(@CurrentDate,'DWN'),
+	  [ShWeekDayName] = dbo.ShDate(@CurrentDate,'DWN'),
       [Month] = MONTH(@CurrentDate),
-	  [ShMonth] = Cast(dbo.ShDateTest(@CurrentDate,'m') as tinyint),
+	  [ShMonth] = Cast(dbo.ShDate(@CurrentDate,'m') as tinyint),
       [MonthName] = DATENAME(mm, @CurrentDate),
-	  [ShMonthName] = dbo.ShDateTest(@CurrentDate,'MMN'),
+	  [ShMonthName] = dbo.ShDate(@CurrentDate,'MMN'),
       [Quarter] = DATEPART(q, @CurrentDate),
       [QuarterName] = CASE 
          WHEN DATENAME(qq, @CurrentDate) = 1
@@ -61,14 +64,14 @@ BEGIN
          WHEN DATENAME(qq, @CurrentDate) = 4
             THEN 'fourth'
          END,
-      [ShQuarter] = Cast(dbo.ShDateTest(@CurrentDate,'q') as tinyint),
-	  [ShQuarterName] = dbo.ShDateTest(@CurrentDate,'QQN'),
+      [ShQuarter] = Cast(dbo.ShDate(@CurrentDate,'q') as tinyint),
+	  [ShQuarterName] = dbo.ShDate(@CurrentDate,'QQN'),
       [Year] = YEAR(@CurrentDate),
-	  [ShYYYY] = CAST(dbo.ShDateTest(@CurrentDate,'YYYY') as int),
+	  [ShYYYY] = CAST(dbo.ShDate(@CurrentDate,'YYYY') as int),
       [YYYYMM] = CAST(YEAR(@CurrentDate) AS VARCHAR(4)) + RIGHT('0' + CAST(MONTH(@CurrentDate) AS VARCHAR(2)), 2),
-	  [ShYYYYMM] = dbo.ShDateTest(@CurrentDate,'YYYY-MM'),
+	  [ShYYYYMM] = dbo.ShDate(@CurrentDate,'YYYY-MM'),
       [YYYYQQ] = CAST(YEAR(@CurrentDate) AS VARCHAR(4)) + RIGHT('0' + CAST(DATEPART(q, @CurrentDate) AS VARCHAR(2)), 2),
-      [ShYYYYQQ] = dbo.ShDateTest(@CurrentDate,'YYYY-QQ'),
+      [ShYYYYQQ] = dbo.ShDate(@CurrentDate,'YYYY-QQ'),
 	  [MonthYear] = CAST(YEAR(@CurrentDate) AS VARCHAR(4)) + UPPER(LEFT(DATENAME(mm, @CurrentDate), 3)),
       [IsWeekend] = CASE 
          WHEN DATENAME(dw, @CurrentDate) = 'Thursday'
