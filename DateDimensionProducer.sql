@@ -2,7 +2,7 @@ SET NOCOUNT ON;
 
 GO
 
-TRUNCATE [dbo].[Dim_Date];
+TRUNCATE TABLE [dbo].[Dim_Date];
 
 GO
 
